@@ -23,6 +23,7 @@ def E_0(s):
 
 
 E = np.linspace(10, 10**4, num_ele)
+x = np.linspace(1, 4, num_ele)
 
 # Create a function to hold the CDF
 def T(E, E_0, s):
@@ -49,7 +50,7 @@ def Fderivative(x, E_0, s):
 
 
 class randgen(rv_continuous):
-    def __init__(self, E_0 = 26, s = 0.8):
+    def __init__(self, E_0, s):
         super().__init__(a=0, b=10**4) # a and b are the lower and upper limits for E respectively
         self.E_0 = E_0
         self.s = s
@@ -57,23 +58,39 @@ class randgen(rv_continuous):
     def _pdf(self, E):
         return (((((0.89*self.E_0) - 1.2) / ((self.E_0 + E)))**self.s) * (1 + (10**(-4)) * self.s*E)**(-2))
     
-    # def _pdf(self, E):
-    #     return (((((0.89*self.E_0) - 1.2) / ((self.E_0 + E)))**self.s) * (1 + (10**(-4)) * self.s*E)**(-2))
+
+# class randgen(rv_continuous):
+#     def __init__(self, E_0, s):
+#         super().__init__(a=1, b=4) # a and b are the lower and upper limits for respectively
+#         self.E_0 = E_0
+#         self.s = s
     
+#     def _pdf(self, x):
+#         return - self.s * (((((0.89*self.E_0) - 1.2) / ((self.E_0 + 10**x)))**self.s) * (1 + (10**(-4)) * self.s*10**x)**(-2)) * ((1/(self.E_0 + 10**x)) + 2/(10**4 + self.s*(10**x)))
+
+
+# class randgen(rv_continuous):
+#     def _pdf(self, E):
+#         return (((((0.89*(44 - 17*(0.2 - 1.46)**2))) - 1.2) / (((44 - 17*(0.2 - 1.46)**2) + E)))**0.2) * (1 + (10**(-4)) * 0.2*E)**(-2)
+
+
+# quad(lambda E: PDF(E, ), 10, 10**4)
+
 
 normalisation = 1/(T(np.inf, E_0(s), s) - T(10, E_0(s), s))
 # normalisation = 1/(T(10**4, E_0(s), s) - T(10, E_0(s), s))
 
 normalisationFderivative = 1/(F(4, E_0(s), s) - F(1, E_0(s), s))
 
-x = np.linspace(1, 4, num_ele)
 
-rg = randgen(E_0 = E_0(s), s = s)
-plt.hist(rg.rvs(size = num_ele), bins = 50, density = True)
+
+# rg = randgen(E_0 = E_0(s), s = s)
+# plt.hist(rg.rvs(size = num_ele), bins = 50, density = True)
 # plt.plot(E, normalisation*PDF(E, E_0(s), s))
 # plt.plot(E, normalisation*T(E, E_0(s), s))
 # plt.plot(E, T(E, E_0(s), s))
 # plt.plot(E, normalisationFderivative*Fderivative(x, E_0(s), s))
 # plt.xscale('log')
 # plt.yscale('log')
-plt.show()
+
+# plt.show()
