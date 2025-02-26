@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import astropy.units as u
 
 class OmegaCalculator:
     def __init__(self):
@@ -191,15 +192,26 @@ class OmegaCalculator:
             Radius of either the core or reach circle of the telescope
             Needs to be passed in as otherwise function doesn't know which one to calculate for
         """
+        # If q is a quantity, convert to unitless value
+        def to_consistent_units(q):
+            if isinstance(q, u.Quantity):
+                return q.to(u.m).value
+            else:
+                return q
+
         # Define constants
-        r = self.r_cone
-        R = r_tel
-        L = self.tel_pos[0]
-        h = self.tel_pos[1]
+        r = to_consistent_units(self.r_cone)
+        R = to_consistent_units(r_tel)
+        L = to_consistent_units(self.tel_pos[0])
+        h = to_consistent_units(self.tel_pos[1])
         K = R**2 - r**2 - L**2 - h**2
 
+        a = (4*(h**2 + L**2))
+        b = (4*K*h)
+        c = ((K**2) - 4*(L**2)*(r**2))
+
         # Calculate roots
-        y = np.roots([4*(h**2) + 4*(L**2), 4*K*h, (K**2) - 4*(L**2)*(r**2)])
+        y = np.roots([a, b, c])
         
         x = [None, None]
         # Determine corresponding x value for each y value
