@@ -248,22 +248,7 @@ class OmegaCalculator:
             raise ValueError("Equal distance between reference point and pair. Unable to determine closest point")
             return (0, 0)
 
-    def determineArcType(self):
-        """
-        Determines if the omega is the major or minor arc depending on position and radius of telescope
-        Approximation, doesn't always work as intended. For example if centre of cone is just barely inside/outside radius of telescope
-        """
-        # Calculate distance
-        dist = np.hypot(0 - self.tel_pos[0], 0 - self.tel_pos[1])
-
-        # If centre of cone within telescope annulus but not telescope core, find major angle by default
-        if self.r_tel_core <= dist <= self.r_tel_reach:
-            return "major"
-        # Otherwise find minor angle
-        else:
-            return "minor"
-
-    def calculateOmegaFromPoints(self, point1, point2, arcType):
+    def calculateOmegaFromPoints(self, point1, point2, tel_type = None):
         """
         Calculates omega from between 2 points
 
@@ -275,27 +260,56 @@ class OmegaCalculator:
         point2: (float, float)
             Second intersection point
 
-        arcType: string
-            Determines if omega returned is the major or minor angle between the two points
-            Depending on position of telescope and radius, either could be best for the situation
-
-        degrees: bool
-            Determines whether returned angle is in degrees or radians
-            by default returns degrees
+        tel_type: int
+            Optional
+            Default = None
+            Tells the function what kind of case its considering
+                None: Angle from between reach and core of telescope
+                1: Angle between points on reach of telescope
+                0: Angle between points on core of telescope
         """
-        # Calculate angles at both points
-        angle1 = np.arctan2(point1[1], point1[0])
-        angle2 = np.arctan2(point2[1], point2[0])
+        
+        # Minor arc is given by equation derived
+        minor_arc = np.arccos((point1[0]*point2[0] + point1[1]*point2[1])/self.r_cone**2)
 
-        # Find angle difference, default to minor angle
-        minor_arc = (angle2 - angle1) % (2*np.pi)
-        minor_arc = min(minor_arc, (2*np.pi) - minor_arc)
+        # Convert both intersection points to their polar angles
+        angle_1 = np.atan2(point1[1], point1[0])
+        angle_2 = np.atan2(point2[1], point2[0])
 
-        # If major requested return major angle, otherwise return minor angle
-        if arcType == "major":
-            return (2*np.pi) - minor_arc
+        # Find approximate average angle by averaging out corresponding unit vectors
+        ave_angle = np.arctan2((np.sin(angle_1) + np.sin(angle_2))/2, (np.cos(angle_1) + np.cos(angle_2))/2)
+
+        # Find midpoint in x and y
+        midpoint = (self.r_cone * np.cos(ave_angle), self.r_cone * np.sin(ave_angle))
+
+        # If getting angle between reach and core (2 pairs of intersections)
+        if tel_type == None:
+            # Calculate distance from midpoint to centre of telescope
+            midpoint_to_centre = np.sqrt((midpoint[0] - self.tel_pos[0])**2 + (midpoint[1] - self.tel_pos[1])**2)
+            midpoint_within_annulus = (self.r_tel_core <= midpoint_to_centre <= self.r_tel_reach)
+            if midpoint_within_annulus:
+                return minor_arc
+            else:
+                return 2*np.pi - minor_arc 
+
+        # If getting angle between 2 points on same circle (1 pair of intersections)
         else:
-            return minor_arc
+            # Reach and core have opposite criteria, so need to check seperately
+            if (tel_type == 1):
+                # Check if midpoint is within radius of reach or not
+                midpoint_within_rad = (midpoint[0] - self.tel_pos[0])**2 + (midpoint[1]-self.tel_pos[1])**2 <= self.r_tel_reach**2
+                if midpoint_within_rad == True:
+                    return minor_arc
+                else:
+                    return 2*np.pi - minor_arc
+            
+            elif (tel_type == 0):
+                # Check if midpoint is within radius of core or not
+                midpoint_within_rad = (midpoint[0] - self.tel_pos[0])**2 + (midpoint[1]-self.tel_pos[1])**2 <= self.r_tel_core**2
+                if midpoint_within_rad == True:
+                    return 2*np.pi - minor_arc
+                else:
+                    return minor_arc
 
     def getOmegas(self):
         """
@@ -339,13 +353,13 @@ class OmegaCalculator:
         # Case 6 - Cone intersecting twice solely with Telescope Annulus
         elif (intersect_tel_reach and not intersect_tel_core):
             points = self.getIntersectionPoints(self.r_tel_reach)
-            omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
+            omega = self.calculateOmegaFromPoints(points[0], points[1], 1)
             return omega * 180/np.pi
         
         # Case 7 - Cone intersecting twice solely with Telescope Core
         elif (intersect_tel_core and not intersect_tel_reach):
             points = self.getIntersectionPoints(self.r_tel_core)
-            omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
+            omega = self.calculateOmegaFromPoints(points[0], points[1], 0)
             return omega * 180/np.pi
         
         # Case 8 - Cone intersecting with both Telescope Annulus and Core
@@ -358,8 +372,8 @@ class OmegaCalculator:
             pair2 = (core_pair[1], self.getClosestPoint(core_pair[1], reach_pair))
 
             # Calculate both omegas
-            omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1], "minor")
-            omega2 = self.calculateOmegaFromPoints(pair2[0], pair2[1], "minor")
+            omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1])
+            omega2 = self.calculateOmegaFromPoints(pair2[0], pair2[1])
 
             # omega1 should equal omega2
             if not np.isclose(omega1, omega2, rtol=1e-5):
