@@ -204,27 +204,18 @@ class OmegaCalculator:
         R = to_consistent_units(r_tel)
         L = to_consistent_units(self.tel_pos[0])
         h = to_consistent_units(self.tel_pos[1])
-        K = R**2 - r**2 - L**2 - h**2
+        K = (-R**2 + r**2 + L**2 + h**2)/2
 
-        a = (4*(h**2 + L**2))
-        b = (4*K*h)
-        c = ((K**2) - 4*(L**2)*(r**2))
+        # Calculate x positions of intersection points
+        x_1 = ((K*L) + h*np.sqrt(((r**2)*(h**2)) + ((r**2)*(L**2)) - (K**2)))/(h**2 + L**2)
+        x_2 = ((K*L) - h*np.sqrt(((r**2)*(h**2)) + ((r**2)*(L**2)) - (K**2)))/(h**2 + L**2)
 
-        # Calculate roots
-        y = np.roots([a, b, c])
-        
-        x = [None, None]
-        # Determine corresponding x value for each y value
-        for idx, y_val in enumerate(y):   
-            cone_xs = [np.sqrt(r**2 - y_val**2), -np.sqrt(r**2 - y_val**2)]
-            tel_xs = [np.sqrt(R**2 - (y_val-h)**2) + L, -np.sqrt(R**2 - (y_val-h)**2) + L]
+        # Calculate y positions of intersection points
+        y_1 = (K-(x_1*L))/h
+        y_2 = (K-(x_2*L))/h
 
-            # If approximately same x point produced in cone_xs and tel_xs, must be correct x point
-            match = next((val for val in cone_xs if any(np.isclose(val, a) for a in tel_xs)), None)
-            if match is not None:
-                x[idx] = match
-
-        return (x[0], y[0]), (x[1], y[1])
+        # return (x[0], y[0]), (x[1], y[1])
+        return (x_1, y_1), (x_2, y_2)
 
     def getClosestPoint(self, point, pair):
         """
