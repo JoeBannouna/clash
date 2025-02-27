@@ -247,7 +247,7 @@ class OmegaCalculator:
         else:
             raise ValueError("Equal distance between reference point and pair. Unable to determine closest point")
             return (0, 0)
-
+    
     def calculateOmegaFromPoints(self, point1, point2, tel_type = None):
         """
         Calculates omega from between 2 points
@@ -269,22 +269,37 @@ class OmegaCalculator:
                 0: Angle between points on core of telescope
         """
         
-        # Minor arc is given by equation derived
-        # Use formula for angle derived from the definition of the dot product:
-        # theta = cos( (x_1*x_2 + y_1*y_2) / r^2)
-        minor_arc = np.arccos((point1[0]*point2[0] + point1[1]*point2[1])/self.r_cone**2)
+        # If q is a quantity, convert to unitless value
+        def to_unitless(q):
+            if isinstance(q, u.Quantity):
+                return q.to(u.dimensionless_unscaled).value
+            else:
+                return q
 
-        # Convert both intersection points to their polar angles\
-        # atan2's range is from -pi to pi
-        angle_1 = np.atan2(point1[1], point1[0])
-        angle_2 = np.atan2(point2[1], point2[0])
+        # Compute the dot product.
+        dot = point1[0] * point2[0] + point1[1] * point2[1]
+
+        # Compute the ratio; should be dimensionless
+        ratio = dot / self.r_cone**2
+
+        # Might directly fix issue in lebohec_sabrina code
+        if isinstance(ratio, u.Quantity) and ratio.unit.is_equivalent(1/u.m**2):
+            ratio = ratio * (1 * u.m**2)
+
+        # Now convert to a plain number:
+        cos_val = to_unitless(ratio)
+
+        # Clip for numerical safety and compute the minor arc.
+        minor_arc = np.arccos(np.clip(cos_val, -1, 1))
+
+        # Convert both intersection points to their polar angles
+        angle_1 = np.arctan2(point1[1], point1[0])
+        angle_2 = np.arctan2(point2[1], point2[0])
 
         # Find approximate average angle by averaging out corresponding unit vectors
-        # In polar coordinates, x = r cos theta and y = r sin theta
-        # Want to find the angle between angle_1 and angle_2
         ave_angle = np.arctan2((np.sin(angle_1) + np.sin(angle_2))/2, (np.cos(angle_1) + np.cos(angle_2))/2)
 
-        # Find midpoint between intersection points in x and y coordinates on the arc
+        # Find midpoint in x and y
         midpoint = (self.r_cone * np.cos(ave_angle), self.r_cone * np.sin(ave_angle))
 
         # If getting angle between reach and core (2 pairs of intersections)
