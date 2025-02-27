@@ -270,16 +270,21 @@ class OmegaCalculator:
         """
         
         # Minor arc is given by equation derived
+        # Use formula for angle derived from the definition of the dot product:
+        # theta = cos( (x_1*x_2 + y_1*y_2) / r^2)
         minor_arc = np.arccos((point1[0]*point2[0] + point1[1]*point2[1])/self.r_cone**2)
 
-        # Convert both intersection points to their polar angles
+        # Convert both intersection points to their polar angles\
+        # atan2's range is from -pi to pi
         angle_1 = np.atan2(point1[1], point1[0])
         angle_2 = np.atan2(point2[1], point2[0])
 
         # Find approximate average angle by averaging out corresponding unit vectors
+        # In polar coordinates, x = r cos theta and y = r sin theta
+        # Want to find the angle between angle_1 and angle_2
         ave_angle = np.arctan2((np.sin(angle_1) + np.sin(angle_2))/2, (np.cos(angle_1) + np.cos(angle_2))/2)
 
-        # Find midpoint in x and y
+        # Find midpoint between intersection points in x and y coordinates on the arc
         midpoint = (self.r_cone * np.cos(ave_angle), self.r_cone * np.sin(ave_angle))
 
         # If getting angle between reach and core (2 pairs of intersections)
