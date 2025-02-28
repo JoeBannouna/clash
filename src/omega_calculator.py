@@ -51,6 +51,22 @@ class OmegaCalculator:
 
 
 
+    def determineArcType(self):
+        """
+        Determines if the omega is the major or minor arc depending on position and radius of telescope
+        Approximation, doesn't always work as intended. For example if centre of cone is just barely inside/outside radius of telescope
+        """
+        # Calculate distance
+        dist = np.hypot(0 - self.tel_pos[0], 0 - self.tel_pos[1])
+
+        # If centre of cone within telescope annulus but not telescope core, find major angle by default
+        if self.r_tel_core <= dist <= self.r_tel_reach:
+            return "major"
+        # Otherwise find minor angle
+        else:
+            return "minor"
+
+
     def plotArc(self, start, end, dw, num_ele = 100):
         """
         Plots an arc between start and end with the specified angle.
@@ -88,6 +104,12 @@ class OmegaCalculator:
 
         print("start angle: ", start_angle*180/np.pi)
         print("end angle: ", end_angle*180/np.pi)
+
+        # if self.determineArcType == "minor":
+            
+        
+        # elif self.determineArcType == "major":
+            #
 
         # Check whether dw is a reflex angle, then create a corresponding linspace of angles from the start angle to the end angle
         # if dw is not reflex (<= 180 deg), plot clockwise
@@ -193,6 +215,7 @@ class OmegaCalculator:
         # Aspect ratio set such that circles always look correct
         ax.set_aspect("equal", adjustable="box")
 
+        # Plot the arc
         if plot_variables == True:
             # Create straight line indicating radius of cone (Rho) along X-axis
             rho_x = [cone_pos[0], cone_pos[0] + self.r_cone]
@@ -207,6 +230,9 @@ class OmegaCalculator:
             elif len(dw) == 2:
                 self.plotArc(start[0], end[0], dw[0], num_ele)
                 self.plotArc(start[1], end[1], dw[1], num_ele)
+
+        # Show legend
+        ax.legend()
 
         if export_path:
             fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
@@ -280,20 +306,7 @@ class OmegaCalculator:
             raise ValueError("Equal distance between reference point and pair. Unable to determine closest point")
             return (0, 0)
 
-    def determineArcType(self):
-        """
-        Determines if the omega is the major or minor arc depending on position and radius of telescope
-        Approximation, doesn't always work as intended. For example if centre of cone is just barely inside/outside radius of telescope
-        """
-        # Calculate distance
-        dist = np.hypot(0 - self.tel_pos[0], 0 - self.tel_pos[1])
 
-        # If centre of cone within telescope annulus but not telescope core, find major angle by default
-        if self.r_tel_core <= dist <= self.r_tel_reach:
-            return "major"
-        # Otherwise find minor angle
-        else:
-            return "minor"
 
     def calculateOmegaFromPoints(self, point1, point2, arcType):
         """
