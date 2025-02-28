@@ -184,13 +184,18 @@ class OmegaCalculator:
 
     def getIntersectionPoints(self, r_tel):
         """
-        Returns 2 points in the 2D-plane that correspond to where the two circles intersect
+        Returns 2 points on the 2D-plane that correspond to where the Cherenkov shower cone and the telescope's core or reach.
         
         Parameters
         -----------
         r_tel: float
-            Radius of either the core or reach circle of the telescope
-            Needs to be passed in as otherwise function doesn't know which one to calculate for
+            Radius of either the core or reach of the telescope.
+            Needs to be passed in, otherwise function doesn't know which one to calculate for.
+
+        Return
+        ------
+        (x_1, y_1) and (x_2, y_2): tuples
+            Coordinates for the intersection points between the Cherenkov shower cone and the telescope's core or reach.
         """
         # If q is a quantity, convert to unitless value
         def to_consistent_units(q):
@@ -219,7 +224,7 @@ class OmegaCalculator:
 
     def getClosestPoint(self, point, pair):
         """
-        Determines which of the points in the pair is closest to the reference point
+        Determines which of the points in pair is closest to the reference point
 
         Parameters
         -----------
@@ -228,6 +233,11 @@ class OmegaCalculator:
         
         pair: ((float, float), (float, float))
             Comparison points, usually the intersection points where the cone intersects the annulus of the telescope   
+
+        Return
+        ------
+        pair[0] or pair[1]: float
+            The coordinates of the point in pair which is closest to the reference point.
         """
         getDistance = lambda p1, p2: np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
@@ -267,6 +277,11 @@ class OmegaCalculator:
                 None: Angle from between reach and core of telescope
                 1: Angle between points on reach of telescope
                 0: Angle between points on core of telescope
+
+        Return
+        ------
+        δω: float
+            The angle between the intersection points between the Cherenkov shower cone and the telescope's reach and/or core.
         """
         
         # If q is a quantity, convert to unitless value
