@@ -193,6 +193,7 @@ class OmegaCalculator:
         # Aspect ratio set such that circles always look correct
         ax.set_aspect("equal", adjustable="box")
 
+        # Plot the arc
         if plot_variables == True:
             # Create straight line indicating radius of cone (Rho) along X-axis
             rho_x = [cone_pos[0], cone_pos[0] + self.r_cone]
@@ -207,6 +208,9 @@ class OmegaCalculator:
             elif len(dw) == 2:
                 self.plotArc(start[0], end[0], dw[0], num_ele)
                 self.plotArc(start[1], end[1], dw[1], num_ele)
+
+        # Show legend
+        ax.legend()
 
         if export_path:
             fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
