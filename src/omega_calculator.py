@@ -81,20 +81,18 @@ class OmegaCalculator:
         start_angle = np.arctan2(start[1] - centre[1], start[0] - centre[0])
         end_angle = np.arctan2(end[1] - centre[1], end[0] - centre[0])
 
+        # arctan2's range is from -pi to pi
+        # Thus, in order to plot points on the arc, need to shift the range to [0, 2pi) instead
+        # Hence, if start_angle or end_angle is in the range of [-pi, 0) (i.e. <0), add 2pi to it.
+        # We have yet to determine what to do when the angle is exactly 0 
         if start_angle < 0:
             start_angle = 2 * np.pi + start_angle
 
         if end_angle < 0:
             end_angle = 2 * np.pi + end_angle
 
-        print("start angle: ", start_angle*180/np.pi)
-        print("end angle: ", end_angle*180/np.pi)
-
-        # if self.determineArcType == "minor":
-            
-        
-        # elif self.determineArcType == "major":
-            #
+        print("start angle: ", start_angle*180/np.pi, "degrees")
+        print("end angle: ", end_angle*180/np.pi, "degrees")
 
         # Check whether dw is a reflex angle, then create a corresponding linspace of angles from the start angle to the end angle
         # if dw is not reflex (<= 180 deg), plot clockwise
@@ -367,6 +365,8 @@ class OmegaCalculator:
                     return 2*np.pi - minor_arc
                 else:
                     return minor_arc
+                
+
 
     def getOmegas(self, show_graph = False):
         """
@@ -411,12 +411,16 @@ class OmegaCalculator:
         elif (intersect_tel_reach and not intersect_tel_core):
             points = self.getIntersectionPoints(self.r_tel_reach)
             omega = self.calculateOmegaFromPoints(points[0], points[1], 1)
+            print("Intersection point 1: ", points[0])
+            print("Intersection point 2: ", points[1])
             return omega * 180/np.pi
         
         # Case 7 - Cone intersecting twice solely with Telescope Core
         elif (intersect_tel_core and not intersect_tel_reach):
             points = self.getIntersectionPoints(self.r_tel_core)
             omega = self.calculateOmegaFromPoints(points[0], points[1], 0)
+            print("Intersection point 1: ", points[0])
+            print("Intersection point 2: ", points[1])
             return omega * 180/np.pi
         
         # Case 8 - Cone intersecting with both Telescope Annulus and Core
@@ -427,6 +431,8 @@ class OmegaCalculator:
             # Use core_pair as reference, compare to reach_pair to find corresponding pairs
             pair1 = (core_pair[0], self.getClosestPoint(core_pair[0], reach_pair))
             pair2 = (core_pair[1], self.getClosestPoint(core_pair[1], reach_pair))
+            print("1st pair of closest intersection points are", pair1[0], "and", pair1[1])
+            print("2nd pair of closest intersection points are", pair2[0], "and", pair2[1])
 
             # Calculate both omegas
             omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1])
