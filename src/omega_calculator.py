@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import astropy.units as u
 
 class OmegaCalculator:
     def __init__(self):
@@ -102,7 +101,7 @@ class OmegaCalculator:
         plt.scatter(*end, color = 'darkseagreen', label = 'Intersection Point 2')
         plt.text((start[0] + end[0])/2, (start[1] + end[1])/2 + 0.15, "δω")
 
-    def graphCircles(self, plot_variables = False, dw = [], start = [], end = [], num_ele = 100):
+    def graphCircles(self, plot_variables = False, dw = [], start = [], end = [], num_ele = 100, export_path = None, custom_title = None):
         """
         Plots the Cherenkov cone, telescope core and telescope's reach and other optional variables such as ρ and δω.
 
@@ -141,6 +140,16 @@ class OmegaCalculator:
 
         num_ele: int
             Number of points to generate on the circles and δω.
+
+        export_path: string
+            Optional
+            Default: None
+            Saves graph to specified directory. If no path given plot will not be saved
+
+        custom_title: string
+            Optional
+            Default: None
+            Sets a custom title for graph, overrides default title
         """
         cone_pos = self.original_cone_pos
         tel_pos = self.original_tel_pos
@@ -150,30 +159,33 @@ class OmegaCalculator:
         x = np.cos(theta)
         y = np.sin(theta)
 
-        plt.figure(figsize = (6, 6))
+        fig, ax = plt.subplots(figsize = (6, 6))
         
         # Plot Cherenkov Cone
-        plt.plot(cone_pos[0] + x*self.r_cone, cone_pos[1] + y*self.r_cone, label = "Shower Cone", linestyle = "-", color = "black")
+        ax.plot(cone_pos[0] + x*self.r_cone, cone_pos[1] + y*self.r_cone, label = "Shower Cone", linestyle = "-", color = "black")
 
         # Plot Telescope Core and Reach
-        plt.plot(tel_pos[0] + x*self.r_tel_core, tel_pos[1] + y*self.r_tel_core, label = 'Telescope Core', linestyle = '--', color = 'red')
-        plt.plot(tel_pos[0] + x*self.r_tel_reach, tel_pos[1] + y*self.r_tel_reach, label = 'Telescope Reach', linestyle = '--', color = 'blue')
+        ax.plot(tel_pos[0] + x*self.r_tel_core, tel_pos[1] + y*self.r_tel_core, label = 'Telescope Core', linestyle = '--', color = 'red')
+        ax.plot(tel_pos[0] + x*self.r_tel_reach, tel_pos[1] + y*self.r_tel_reach, label = 'Telescope Reach', linestyle = '--', color = 'blue')
 
         # Labels and title
-        plt.title("Shower Cone and Telescope Projection")
-        plt.xlabel("X-axis")
-        plt.ylabel("Y-axis")
-        plt.grid(True)
+        if custom_title:
+            ax.set_title(custom_title)
+        else:
+            ax.set_title("Shower Cone and Telescope Projection")
+        ax.set_xlabel("X-axis")
+        ax.set_ylabel("Y-axis")
+        ax.grid(True)
 
         # Aspect ratio set such that circles always look correct
-        plt.gca().set_aspect("equal", adjustable="box")
+        ax.set_aspect("equal", adjustable="box")
 
         if plot_variables == True:
             # Create straight line indicating radius of cone (Rho) along X-axis
             rho_x = [cone_pos[0], cone_pos[0] + self.r_cone]
             rho_y = [cone_pos[1], cone_pos[1]]
-            plt.plot(rho_x, rho_y, label = "ρ", linestyle = "-", color = "green")
-            plt.text((cone_pos[0] + cone_pos[0] + self.r_cone)/2, cone_pos[1] + 0.15, "ρ")
+            ax.plot(rho_x, rho_y, label = "ρ", linestyle = "-", color = "green")
+            ax.text((cone_pos[0] + cone_pos[0] + self.r_cone)/2, cone_pos[1] + 0.15, "ρ")
 
             # Depending on dw, plot 1 or 2 arc between intersection points
             if len(dw) == 1:
@@ -181,50 +193,46 @@ class OmegaCalculator:
             elif len(dw) == 2:
                 self.plotArc(start[0], end[0], self.r_cone, cone_pos, dw[0], num_ele)
                 self.plotArc(start[1], end[1], self.r_cone, cone_pos, dw[1], num_ele)
+        if export_path:
+            fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
+        plt.show()
 
     def getIntersectionPoints(self, r_tel):
         """
-        Returns 2 points on the 2D-plane that correspond to where the Cherenkov shower cone and the telescope's core or reach.
+        Returns 2 points in the 2D-plane that correspond to where the two circles intersect
         
         Parameters
         -----------
         r_tel: float
-            Radius of either the core or reach of the telescope.
-            Needs to be passed in, otherwise function doesn't know which one to calculate for.
-
-        Return
-        ------
-        (x_1, y_1) and (x_2, y_2): tuples
-            Coordinates for the intersection points between the Cherenkov shower cone and the telescope's core or reach.
+            Radius of either the core or reach circle of the telescope
+            Needs to be passed in as otherwise function doesn't know which one to calculate for
         """
-        # If q is a quantity, convert to unitless value
-        def to_consistent_units(q):
-            if isinstance(q, u.Quantity):
-                return q.to(u.m).value
-            else:
-                return q
-
         # Define constants
-        r = to_consistent_units(self.r_cone)
-        R = to_consistent_units(r_tel)
-        L = to_consistent_units(self.tel_pos[0])
-        h = to_consistent_units(self.tel_pos[1])
-        K = (-R**2 + r**2 + L**2 + h**2)/2
+        r = self.r_cone
+        R = r_tel
+        L = self.tel_pos[0]
+        h = self.tel_pos[1]
+        K = R**2 - r**2 - L**2 - h**2
 
-        # Calculate x positions of intersection points
-        x_1 = ((K*L) + h*np.sqrt(((r**2)*(h**2)) + ((r**2)*(L**2)) - (K**2)))/(h**2 + L**2)
-        x_2 = ((K*L) - h*np.sqrt(((r**2)*(h**2)) + ((r**2)*(L**2)) - (K**2)))/(h**2 + L**2)
+        # Calculate roots
+        y = np.roots([4*(h**2) + 4*(L**2), 4*K*h, (K**2) - 4*(L**2)*(r**2)])
+        
+        x = [None, None]
+        # Determine corresponding x value for each y value
+        for idx, y_val in enumerate(y):   
+            cone_xs = [np.sqrt(r**2 - y_val**2), -np.sqrt(r**2 - y_val**2)]
+            tel_xs = [np.sqrt(R**2 - (y_val-h)**2) + L, -np.sqrt(R**2 - (y_val-h)**2) + L]
 
-        # Calculate y positions of intersection points
-        y_1 = (K-(x_1*L))/h
-        y_2 = (K-(x_2*L))/h
+            # If approximately same x point produced in cone_xs and tel_xs, must be correct x point
+            match = next((val for val in cone_xs if any(np.isclose(val, a) for a in tel_xs)), None)
+            if match is not None:
+                x[idx] = match
 
-        # return (x[0], y[0]), (x[1], y[1])
-        return (x_1, y_1), (x_2, y_2)
+        return (x[0], y[0]), (x[1], y[1])
 
     def getClosestPoint(self, point, pair):
         """
-        Determines which of the points in pair is closest to the reference point
+        Determines which of the points in the pair is closest to the reference point
 
         Parameters
         -----------
@@ -233,11 +241,6 @@ class OmegaCalculator:
         
         pair: ((float, float), (float, float))
             Comparison points, usually the intersection points where the cone intersects the annulus of the telescope   
-
-        Return
-        ------
-        pair[0] or pair[1]: float
-            The coordinates of the point in pair which is closest to the reference point.
         """
         getDistance = lambda p1, p2: np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
@@ -257,8 +260,23 @@ class OmegaCalculator:
         else:
             raise ValueError("Equal distance between reference point and pair. Unable to determine closest point")
             return (0, 0)
-    
-    def calculateOmegaFromPoints(self, point1, point2, tel_type = None):
+
+    def determineArcType(self):
+        """
+        Determines if the omega is the major or minor arc depending on position and radius of telescope
+        Approximation, doesn't always work as intended. For example if centre of cone is just barely inside/outside radius of telescope
+        """
+        # Calculate distance
+        dist = np.hypot(0 - self.tel_pos[0], 0 - self.tel_pos[1])
+
+        # If centre of cone within telescope annulus but not telescope core, find major angle by default
+        if self.r_tel_core <= dist <= self.r_tel_reach:
+            return "major"
+        # Otherwise find minor angle
+        else:
+            return "minor"
+
+    def calculateOmegaFromPoints(self, point1, point2, arcType):
         """
         Calculates omega from between 2 points
 
@@ -270,81 +288,27 @@ class OmegaCalculator:
         point2: (float, float)
             Second intersection point
 
-        tel_type: int
-            Optional
-            Default = None
-            Tells the function what kind of case its considering
-                None: Angle from between reach and core of telescope
-                1: Angle between points on reach of telescope
-                0: Angle between points on core of telescope
+        arcType: string
+            Determines if omega returned is the major or minor angle between the two points
+            Depending on position of telescope and radius, either could be best for the situation
 
-        Return
-        ------
-        δω: float
-            The angle between the intersection points between the Cherenkov shower cone and the telescope's reach and/or core.
+        degrees: bool
+            Determines whether returned angle is in degrees or radians
+            by default returns degrees
         """
-        
-        # If q is a quantity, convert to unitless value
-        def to_unitless(q):
-            if isinstance(q, u.Quantity):
-                return q.to(u.dimensionless_unscaled).value
-            else:
-                return q
+        # Calculate angles at both points
+        angle1 = np.arctan2(point1[1], point1[0])
+        angle2 = np.arctan2(point2[1], point2[0])
 
-        # Compute the dot product.
-        dot = point1[0] * point2[0] + point1[1] * point2[1]
+        # Find angle difference, default to minor angle
+        minor_arc = (angle2 - angle1) % (2*np.pi)
+        minor_arc = min(minor_arc, (2*np.pi) - minor_arc)
 
-        # Compute the ratio; should be dimensionless
-        ratio = dot / self.r_cone**2
-
-        # Might directly fix issue in lebohec_sabrina code
-        if isinstance(ratio, u.Quantity) and ratio.unit.is_equivalent(1/u.m**2):
-            ratio = ratio * (1 * u.m**2)
-
-        # Now convert to a plain number:
-        cos_val = to_unitless(ratio)
-
-        # Clip for numerical safety and compute the minor arc.
-        minor_arc = np.arccos(np.clip(cos_val, -1, 1))
-
-        # Convert both intersection points to their polar angles
-        angle_1 = np.arctan2(point1[1], point1[0])
-        angle_2 = np.arctan2(point2[1], point2[0])
-
-        # Find approximate average angle by averaging out corresponding unit vectors
-        ave_angle = np.arctan2((np.sin(angle_1) + np.sin(angle_2))/2, (np.cos(angle_1) + np.cos(angle_2))/2)
-
-        # Find midpoint in x and y
-        midpoint = (self.r_cone * np.cos(ave_angle), self.r_cone * np.sin(ave_angle))
-
-        # If getting angle between reach and core (2 pairs of intersections)
-        if tel_type == None:
-            # Calculate distance from midpoint to centre of telescope
-            midpoint_to_centre = np.sqrt((midpoint[0] - self.tel_pos[0])**2 + (midpoint[1] - self.tel_pos[1])**2)
-            midpoint_within_annulus = (self.r_tel_core <= midpoint_to_centre <= self.r_tel_reach)
-            if midpoint_within_annulus:
-                return minor_arc
-            else:
-                return 2*np.pi - minor_arc 
-
-        # If getting angle between 2 points on same circle (1 pair of intersections)
+        # If major requested return major angle, otherwise return minor angle
+        if arcType == "major":
+            return (2*np.pi) - minor_arc
         else:
-            # Reach and core have opposite criteria, so need to check seperately
-            if (tel_type == 1):
-                # Check if midpoint is within radius of reach or not
-                midpoint_within_rad = (midpoint[0] - self.tel_pos[0])**2 + (midpoint[1]-self.tel_pos[1])**2 <= self.r_tel_reach**2
-                if midpoint_within_rad == True:
-                    return minor_arc
-                else:
-                    return 2*np.pi - minor_arc
-            
-            elif (tel_type == 0):
-                # Check if midpoint is within radius of core or not
-                midpoint_within_rad = (midpoint[0] - self.tel_pos[0])**2 + (midpoint[1]-self.tel_pos[1])**2 <= self.r_tel_core**2
-                if midpoint_within_rad == True:
-                    return 2*np.pi - minor_arc
-                else:
-                    return minor_arc
+            return minor_arc
 
     def getOmegas(self):
         """
@@ -388,13 +352,13 @@ class OmegaCalculator:
         # Case 6 - Cone intersecting twice solely with Telescope Annulus
         elif (intersect_tel_reach and not intersect_tel_core):
             points = self.getIntersectionPoints(self.r_tel_reach)
-            omega = self.calculateOmegaFromPoints(points[0], points[1], 1)
+            omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
             return omega * 180/np.pi
         
         # Case 7 - Cone intersecting twice solely with Telescope Core
         elif (intersect_tel_core and not intersect_tel_reach):
             points = self.getIntersectionPoints(self.r_tel_core)
-            omega = self.calculateOmegaFromPoints(points[0], points[1], 0)
+            omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
             return omega * 180/np.pi
         
         # Case 8 - Cone intersecting with both Telescope Annulus and Core
@@ -407,8 +371,8 @@ class OmegaCalculator:
             pair2 = (core_pair[1], self.getClosestPoint(core_pair[1], reach_pair))
 
             # Calculate both omegas
-            omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1])
-            omega2 = self.calculateOmegaFromPoints(pair2[0], pair2[1])
+            omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1], "minor")
+            omega2 = self.calculateOmegaFromPoints(pair2[0], pair2[1], "minor")
 
             # omega1 should equal omega2
             if not np.isclose(omega1, omega2, rtol=1e-5):
