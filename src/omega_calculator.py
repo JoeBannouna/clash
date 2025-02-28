@@ -14,6 +14,8 @@ class OmegaCalculator:
         self.r_tel_core = None
         self.r_tel_reach = None
 
+
+
     def update(self, cone_pos = (0, 0), tel_pos = (0, 0), r_cone = None, r_tel_core = None, r_tel_reach = None):
         """
         Sets parameters of the Cherenkov Cone and the Telescope in a 2D-plane
@@ -47,7 +49,9 @@ class OmegaCalculator:
         self.r_tel_core = r_tel_core
         self.r_tel_reach = r_tel_reach
 
-    def plotArc(start, end, radius, centre, dw, num_ele):
+
+
+    def plotArc(self, start, end, dw, num_ele = 100):
         """
         Plots an arc between start and end with the specified angle.
 
@@ -62,44 +66,51 @@ class OmegaCalculator:
         angle: float
             Angle (in degrees) defining the arc curvature.
 
-        radius: float
-            Radius of the arc.
-
-        centre: tuple
-            Coordinates for the centre of the arc.
-
         dw: float
             The angle δω in radians.
 
         num_ele: int
             Number of points to generate on the arc.
         """
-        # Distance between points
-        d = np.sqrt((end[0] - start[0])**2 + (end[1]-start[1])**2)
 
-        # Start and end angles of arc
+        radius = self.r_cone
+        centre = self.original_cone_pos
+
+        # Compute the start and end angles
         start_angle = np.arctan2(start[1] - centre[1], start[0] - centre[0])
         end_angle = np.arctan2(end[1] - centre[1], end[0] - centre[0])
 
-        # Check if dw is reflex angle, create corresponding angle linspace from start angle to end angle
-        # If dw not reflex angle (<= 180 deg), plot cw
+        if start_angle < 0:
+            start_angle = 2 * np.pi + start_angle
+
+        if end_angle < 0:
+            end_angle = 2 * np.pi + end_angle
+
+        print("start angle: ", start_angle*180/np.pi)
+        print("end angle: ", end_angle*180/np.pi)
+
+        # Check whether dw is a reflex angle, then create a corresponding linspace of angles from the start angle to the end angle
+        # if dw is not reflex (<= 180 deg), plot clockwise
         if dw <= np.pi:
             theta_values = np.linspace(start_angle, end_angle, num_ele)
-        # If dw reflex angle, plot ccw
-        else:
+
+        # if dw is a reflex angle, plot counter-clockwise
+        elif dw > np.pi:
             theta_values = np.linspace(start_angle, start_angle + dw, num_ele)
 
         # Generate arc points
         arc_x = centre[0] + radius * np.cos(theta_values)
         arc_y = centre[1] + radius * np.sin(theta_values)
 
-        # Plot arc
+        # Plot the arc
         plt.plot(arc_x, arc_y, color = "magenta", label = "δω")
 
-        # Plot given points
-        plt.scatter(*start, color = 'green', label = 'Intersection Point 1')
-        plt.scatter(*end, color = 'darkseagreen', label = 'Intersection Point 2')
+        # Plot the given points
+        plt.scatter(*start, color = 'green' , label = 'Intersection point 1')
+        plt.scatter(*end, color = 'darkseagreen', label = 'Intersection point 2')
         plt.text((start[0] + end[0])/2, (start[1] + end[1])/2 + 0.15, "δω")
+
+
 
     def graphCircles(self, plot_variables = False, dw = [], start = [], end = [], num_ele = 100, export_path = None, custom_title = None):
         """
@@ -171,8 +182,10 @@ class OmegaCalculator:
         # Labels and title
         if custom_title:
             ax.set_title(custom_title)
+
         else:
             ax.set_title("Shower Cone and Telescope Projection")
+
         ax.set_xlabel("X-axis")
         ax.set_ylabel("Y-axis")
         ax.grid(True)
@@ -189,13 +202,17 @@ class OmegaCalculator:
 
             # Depending on dw, plot 1 or 2 arc between intersection points
             if len(dw) == 1:
-                self.plotArc(start, end, self.r_cone, cone_pos, dw[0], num_ele)
+                self.plotArc(start, end, dw[0], num_ele)
+
             elif len(dw) == 2:
-                self.plotArc(start[0], end[0], self.r_cone, cone_pos, dw[0], num_ele)
-                self.plotArc(start[1], end[1], self.r_cone, cone_pos, dw[1], num_ele)
+                self.plotArc(start[0], end[0], dw[0], num_ele)
+                self.plotArc(start[1], end[1], dw[1], num_ele)
+
         if export_path:
             fig.savefig(export_path, bbox_inches = 'tight', pad_inches = 0.2)
         plt.show()
+
+
 
     def getIntersectionPoints(self, r_tel):
         """
@@ -229,6 +246,8 @@ class OmegaCalculator:
                 x[idx] = match
 
         return (x[0], y[0]), (x[1], y[1])
+
+
 
     def getClosestPoint(self, point, pair):
         """
@@ -353,12 +372,16 @@ class OmegaCalculator:
         elif (intersect_tel_reach and not intersect_tel_core):
             points = self.getIntersectionPoints(self.r_tel_reach)
             omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
+            print("Intersection point 1: ", points[0])
+            print("Intersection point 2: ", points[1])
             return omega * 180/np.pi
         
         # Case 7 - Cone intersecting twice solely with Telescope Core
         elif (intersect_tel_core and not intersect_tel_reach):
             points = self.getIntersectionPoints(self.r_tel_core)
             omega = self.calculateOmegaFromPoints(points[0], points[1], self.determineArcType())
+            print("Intersection point 1: ", points[0])
+            print("Intersection point 2: ", points[1])
             return omega * 180/np.pi
         
         # Case 8 - Cone intersecting with both Telescope Annulus and Core
@@ -369,6 +392,8 @@ class OmegaCalculator:
             # Use core_pair as reference, compare to reach_pair to find corresponding pairs
             pair1 = (core_pair[0], self.getClosestPoint(core_pair[0], reach_pair))
             pair2 = (core_pair[1], self.getClosestPoint(core_pair[1], reach_pair))
+            print("Closest pair of intersection points 1: ", pair1)
+            print("Closest pair of intersection points 2: ", pair2)
 
             # Calculate both omegas
             omega1 = self.calculateOmegaFromPoints(pair1[0], pair1[1], "minor")
